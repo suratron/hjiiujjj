@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no"/>
+<title>Phantom Wallet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #000; --surface: #0f0f11; --surface2: #1a1a1c;
+    --purple: #b3a5ff;
+    --text: #fff; --muted: #6e6e73; --dim: #3a3a3c;
+    --red: #ff453a; --green: #32d74b; --inactive: #48484a;
+    --safe-top: max(59px, env(safe-area-inset-top));
+    --safe-bottom: max(34px, env(safe-area-inset-bottom));
+    --side: max(20px, env(safe-area-inset-left));
+  }
+  html, body {
+    height: 100%; width: 100%;
+    background: #000;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    -webkit-font-smoothing: antialiased; color: var(--text);
+    overscroll-behavior: none;
+    display: flex; justify-content: center; align-items: flex-start;
+  }
+  .phone-frame {
+    width: 100%; max-width: 430px;
+    min-height: 100vh; min-height: 100dvh;
+    background: var(--bg); display: flex; flex-direction: column;
+    position: relative; overflow: hidden;
+  }
+  .top-spacer { height: var(--safe-top); flex-shrink: 0; }
+  .scroll-area {
+    flex: 1; overflow-y: auto; overflow-x: hidden;
+    padding: 6px var(--side) calc(var(--safe-bottom) + 90px);
+    -webkit-overflow-scrolling: touch; scrollbar-width: none;
+  }
+  .scroll-area::-webkit-scrollbar { display: none; }
+
+  .header { display: flex; align-items: center; gap: 10px; padding: 8px 0 4px; }
+  .avatar {
+    width: 36px; height: 36px; border-radius: 50%; overflow: hidden;
+    flex-shrink: 0; cursor: pointer;
+  }
+  .avatar svg { display: block; }
+  .pill-tabs {
+    display: flex; gap: 2px; background: #111113;
+    padding: 3px; border-radius: 22px;
+  }
+  .tab {
+    height: 32px; padding: 0 15px; border-radius: 18px;
+    font-size: 13px; font-weight: 600; border: none; cursor: pointer;
+    background: transparent; color: var(--inactive); letter-spacing: -0.1px;
+    transition: background 0.18s, color 0.18s; font-family: inherit;
+  }
+  .tab.active { background: var(--purple); color: #000; }
+
+  .balance-section { padding: 6px 0 0; }
+  .account-label {
+    display: inline-flex; align-items: center; gap: 4px;
+    color: var(--muted); font-size: 13px; font-weight: 600;
+    letter-spacing: -0.1px; cursor: pointer;
+    transition: color 0.15s;
+  }
+  .account-label:hover { color: #9e9ea3; }
+  .balance-amount {
+    font-size: 48px; font-weight: 700;
+    letter-spacing: -1.5px; margin-top: 2px;
+    line-height: 1.05; font-variant-numeric: tabular-nums;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    font-family: 'Inter', sans-serif;
+  }
+  .perf-row {
+    display: flex; align-items: center; gap: 6px; margin-top: 8px;
+    min-height: 24px;
+  }
+  .perf-change { font-size: 13.5px; font-weight: 600; letter-spacing: -0.2px; }
+  .perf-change.red { color: var(--red); }
+  .perf-change.green { color: var(--green); }
+  .perf-badge {
+    font-size: 12px; font-weight: 700;
+    padding: 2px 8px; border-radius: 7px; letter-spacing: -0.1px;
+  }
+  .perf-badge.red { background: rgba(255,69,58,0.18); color: var(--red); }
+  .perf-badge.green { background: rgba(50,215,75,0.15); color: var(--green); }
+
+  .cash-card {
+    background: #0f0f11;
+    border: 1px solid #1e1e20;
+    border-radius: 18px;
+    padding: 14px 16px; display: flex;
+    justify-content: space-between; align-items: center;
+    margin-top: 22px; cursor: pointer;
+    transition: background 0.12s, border-color 0.12s;
+  }
+  .cash-card:active { background: #161618; }
+  .cash-left { display: flex; align-items: center; gap: 12px; }
+  .cash-icon-wrap {
+    width: 40px; height: 40px; border-radius: 50%;
+    background: #1a1a1c;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .cash-info { display: flex; flex-direction: column; gap: 2px; }
+  .cash-name { font-size: 15px; font-weight: 700; letter-spacing: -0.2px; }
+  .cash-sub { font-size: 12.5px; color: var(--muted); font-weight: 500; }
+  .cash-right { text-align: right; }
+  .cash-value { font-size: 15px; font-weight: 600; letter-spacing: -0.2px; }
+  .cash-change { font-size: 12.5px; font-weight: 500; margin-top: 2px; }
+  .cash-change.red { color: var(--red); }
+  .cash-change.green { color: var(--green); }
+  .cash-change.muted { color: var(--muted); }
+
+  .tokens-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin: 26px 0 12px;
+  }
+  .tokens-title {
+    display: flex; align-items: center; gap: 4px;
+    font-size: 18px; font-weight: 800; letter-spacing: -0.4px; cursor: pointer;
+  }
+
+  .token-row {
+    background: #0f0f11;
+    border: 1px solid #1a1a1c;
+    border-radius: 18px;
+    padding: 13px 15px; display: flex;
+    justify-content: space-between; align-items: center;
+    margin-bottom: 7px; cursor: pointer;
+    transition: background 0.12s, border-color 0.12s;
+  }
+  .token-row:active { background: #161618; }
+  .token-row:hover { border-color: #252528; }
+  .token-left { display: flex; align-items: center; gap: 12px; }
+  .token-icon-wrap { width: 40px; height: 40px; position: relative; flex-shrink: 0; }
+  .token-icon-wrap svg { width: 40px; height: 40px; display: block; border-radius: 50%; }
+  .l2-badge {
+    position: absolute; bottom: -2px; left: -2px;
+    width: 16px; height: 16px; background: var(--bg);
+    border-radius: 5px; display: flex;
+    align-items: center; justify-content: center;
+    border: 1.5px solid #222224;
+  }
+  .token-meta { display: flex; flex-direction: column; gap: 3px; }
+  .token-name-row { display: flex; align-items: center; gap: 5px; }
+  .token-name { font-size: 15px; font-weight: 700; letter-spacing: -0.2px; }
+  .token-sub { font-size: 12.5px; color: var(--muted); font-weight: 500; letter-spacing: -0.1px; }
+  .token-right { text-align: right; display: flex; flex-direction: column; gap: 3px; }
+  .token-value { font-size: 15px; font-weight: 600; letter-spacing: -0.2px; }
+  .token-change-val { font-size: 12.5px; font-weight: 500; letter-spacing: -0.1px; }
+  .token-change-val.red { color: var(--red); }
+  .token-change-val.green { color: var(--green); }
+  .token-change-val.muted { color: var(--muted); }
+  .verified { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
+  .bottom-bar {
+    position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+    width: 100%; max-width: 430px;
+    padding: 10px var(--side) calc(var(--safe-bottom) + 8px);
+    background: linear-gradient(to top, #000 65%, rgba(0,0,0,0.9) 88%, transparent);
+    display: flex; align-items: center; gap: 10px; z-index: 100;
+  }
+  .search-bar {
+    flex: 1; height: 46px; background: #111113;
+    border: 1px solid #1e1e20;
+    border-radius: 23px; display: flex; align-items: center;
+    gap: 9px; padding: 0 16px;
+    transition: border-color 0.15s;
+  }
+  .search-bar:focus-within { border-color: #2e2e30; }
+  .search-bar input {
+    background: none; border: none; outline: none;
+    color: var(--muted); font-size: 14.5px; font-family: inherit;
+    font-weight: 500; flex: 1; letter-spacing: -0.1px;
+  }
+  .fab {
+    width: 46px; height: 46px; border-radius: 50%;
+    background: var(--purple); border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 4px 16px rgba(179,165,255,0.35);
+    transition: opacity 0.15s, transform 0.15s;
+  }
+  .fab:active { opacity: 0.85; transform: scale(0.94); }
+
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.65);
+    z-index: 200; opacity: 0; pointer-events: none;
+    transition: opacity 0.22s;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+
+  .balance-modal {
+    position: fixed; bottom: 0; left: 50%; transform: translateX(-50%) translateY(102%);
+    width: 100%; max-width: 430px;
+    background: #141416;
+    border: 1px solid #222224;
+    border-radius: 26px 26px 0 0;
+    padding: 10px 20px calc(var(--safe-bottom) + 24px); z-index: 300;
+    transition: transform 0.32s cubic-bezier(0.22,0.72,0,1);
+    max-height: 88vh; overflow-y: auto;
+  }
+  .balance-modal.open { transform: translateX(-50%) translateY(0); }
+  .modal-handle {
+    width: 34px; height: 4px; background: #333335;
+    border-radius: 2px; margin: 0 auto 18px;
+  }
+  .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px; }
+  .modal-title { font-size: 17px; font-weight: 700; letter-spacing: -0.3px; }
+  .modal-close {
+    background: #222224; border: none; cursor: pointer;
+    width: 28px; height: 28px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s;
+  }
+  .modal-close:hover { background: #2e2e30; }
+  .modal-subtitle { font-size: 13px; color: var(--muted); margin-bottom: 20px; font-weight: 500; }
+  .modal-rows { display: flex; flex-direction: column; }
+  .modal-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 11px 0; border-bottom: 1px solid #1e1e20;
+  }
+  .modal-row:last-child { border-bottom: none; }
+  .modal-row-left { display: flex; align-items: center; gap: 11px; }
+  .modal-ico { width: 36px; height: 36px; position: relative; flex-shrink: 0; }
+  .modal-ico svg { width: 36px; height: 36px; display: block; border-radius: 50%; }
+  .modal-ico .l2-badge { width: 13px; height: 13px; bottom: -1px; left: -1px; }
+  .modal-meta { display: flex; flex-direction: column; gap: 2px; }
+  .modal-name { font-size: 14px; font-weight: 700; letter-spacing: -0.2px; }
+  .l2-tag {
+    font-size: 9.5px; font-weight: 700; color: var(--muted);
+    background: #222224; padding: 1px 5px; border-radius: 4px;
+    vertical-align: middle; margin-left: 3px;
+  }
+  .modal-price { font-size: 12px; color: var(--muted); font-weight: 500; }
+  .modal-input-wrap {
+    display: flex; align-items: center; gap: 6px;
+    background: #1e1e20; border-radius: 11px; padding: 8px 11px;
+    border: 1px solid #282828; transition: border-color 0.15s;
+  }
+  .modal-input-wrap:focus-within { border-color: rgba(179,165,255,0.4); }
+  .modal-input {
+    background: none; border: none; outline: none; color: var(--text);
+    font-size: 14.5px; font-family: inherit; font-weight: 600;
+    width: 80px; text-align: right; letter-spacing: -0.2px;
+  }
+  .modal-input::placeholder { color: #38383a; }
+  .modal-input::-webkit-outer-spin-button,
+  .modal-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .modal-input[type=number] { -moz-appearance: textfield; }
+  .modal-ticker { font-size: 11.5px; font-weight: 700; color: var(--muted); letter-spacing: 0.2px; white-space: nowrap; }
+  .modal-done {
+    width: 100%; margin-top: 22px; height: 52px;
+    background: var(--purple); border: none; border-radius: 16px;
+    color: #000; font-size: 15.5px; font-weight: 700;
+    font-family: inherit; cursor: pointer; letter-spacing: -0.2px;
+    box-shadow: 0 4px 20px rgba(179,165,255,0.3);
+    transition: opacity 0.15s, transform 0.15s;
+  }
+  .modal-done:active { opacity: 0.85; transform: scale(0.98); }
+
+  .modal-section-label {
+    font-size: 10.5px; font-weight: 700; color: var(--muted);
+    letter-spacing: 0.8px; text-transform: uppercase;
+    margin-bottom: 2px; margin-top: 4px;
+  }
+  .modal-divider { height: 1px; background: #1e1e20; margin: 14px 0 10px; }
+</style>
+</head>
+<body>
+<div class="phone-frame">
+
+  <div class="top-spacer"></div>
+
+  <div class="scroll-area">
+    <div class="header">
+      <div class="avatar" onclick="openModal()">
+        <svg viewBox="0 0 38 38" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="19" cy="19" r="19" fill="#ff5f2e"/>
+          <circle cx="15" cy="16" r="2.8" fill="#fff"/>
+          <circle cx="23" cy="16" r="2.8" fill="#fff"/>
+          <path d="M13.5 24.5 Q19 29.5 24.5 24.5" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/>
+          <circle cx="27" cy="9" r="4" fill="#ffcc00"/>
+          <path d="M25.3 8.2L27 10L29.2 7.2" stroke="#ff5f2e" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="pill-tabs">
+        <button class="tab active" onclick="switchTab(this)">Home</button>
+        <button class="tab" onclick="switchTab(this)">Trade</button>
+        <button class="tab" onclick="switchTab(this)">Explore</button>
+      </div>
+    </div>
+
+    <div class="balance-section">
+      <div class="account-label" onclick="openModal()">
+        Account 1
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+      <div class="balance-amount" id="main-balance">$0.00</div>
+      <div class="perf-row" id="perf-row">
+        <span class="perf-change" style="color:var(--muted)">$0.00</span>
+      </div>
+    </div>
+
+    <div class="cash-card" onclick="openModal()">
+      <div class="cash-left">
+        <div class="cash-icon-wrap">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6e6e73" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="6" width="20" height="12" rx="2.5"/>
+            <circle cx="12" cy="12" r="2.5"/>
+            <path d="M6 12h.01M18 12h.01"/>
+          </svg>
+        </div>
+        <div class="cash-info">
+          <span class="cash-name">Cash</span>
+          <span class="cash-sub">USD balance</span>
+        </div>
+      </div>
+      <div class="cash-right">
+        <div class="cash-value" id="cash-display">$0.00</div>
+        <div class="cash-change muted" id="cash-change-display">$0.00</div>
+      </div>
+    </div>
+
+    <div class="tokens-header">
+      <div class="tokens-title" onclick="openModal()">
+        Tokens
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg>
+      </div>
+    </div>
+    <div id="token-list"></div>
+
+  </div>
+
+  <div class="bottom-bar">
+    <div class="search-bar">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#48484a" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      <input type="text" placeholder="Search Phantom" autocomplete="off" spellcheck="false"/>
+    </div>
+    <button class="fab" onclick="openModal()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round">
+        <line x1="12" y1="4" x2="12" y2="20"/><line x1="4" y1="12" x2="20" y2="12"/>
+      </svg>
+    </button>
+  </div>
+
+  <div id="modal-overlay" class="modal-overlay"></div>
+
+  <div id="balance-modal" class="balance-modal">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <span class="modal-title">Set Balances</span>
+      <button class="modal-close" onclick="closeModal()">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#8e8e93" stroke-width="2.8" stroke-linecap="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <p class="modal-subtitle">Enter amounts — portfolio updates live</p>
+
+    <div class="modal-section-label">Cash</div>
+    <div class="modal-rows">
+      <div class="modal-row">
+        <div class="modal-row-left">
+          <div class="modal-ico">
+            <svg viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="18" cy="18" r="18" fill="#1e1e20"/>
+              <rect x="6" y="11" width="24" height="14" rx="2.5" stroke="#6e6e73" stroke-width="1.8" fill="none"/>
+              <circle cx="18" cy="18" r="2.8" fill="#6e6e73"/>
+            </svg>
+          </div>
+          <div class="modal-meta">
+            <span class="modal-name">Cash (USD)</span>
+            <span class="modal-price">$1.00 per dollar</span>
+          </div>
+        </div>
+        <div class="modal-input-wrap">
+          <input class="modal-input" type="number" min="0" placeholder="0"
+            id="cash-input"
+            oninput="handleCashInput(this)"
+            onfocus="this.select()"/>
+          <span class="modal-ticker">USD</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-divider"></div>
+    <div class="modal-section-label">Tokens</div>
+    <div id="modal-rows" class="modal-rows"></div>
+    <button class="modal-done" onclick="closeModal()">Done</button>
+  </div>
+</div>
+
+<script>
+const ICONS = {
+  BTC: `<svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="20" fill="#f7931a"/><path d="M26.8 17.6c.3-2.1-1.3-3.3-3.5-4l.7-2.8-1.7-.4-.7 2.7-1.4-.3.7-2.8-1.7-.4-.7 2.8-1.1-.3-2.3-.6-.4 1.8s1.3.3 1.2.3c.7.2.8.6.8 1L15 22.9c-.1.4-.4.9-1.1.7l-1.2-.3-.8 2 2.2.5 1.2.3-.7 2.9 1.7.4.7-2.8 1.4.4-.7 2.8 1.7.4.7-2.9c2.9.5 5 .3 5.9-2.3.7-2.1-.1-3.2-1.5-4 1.1-.2 1.9-1 2.1-2.5zm-3.8 5.3c-.5 2.1-4 1-5.1.7l.9-3.6c1.1.3 4.8.8 4.2 2.9zm.5-5.3c-.5 1.9-3.5.9-4.4.7l.8-3.3c1 .2 4.1.7 3.6 2.6z" fill="#fff"/></svg>`,
+  SOL: `<svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="20" fill="#0a0a0a"/><defs><linearGradient id="sg" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#9945ff"/><stop offset="100%" stop-color="#14f195"/></linearGradient></defs><path d="M10.5 12.5L27.5 12.5L29.5 14.5L12.5 14.5Z" fill="url(#sg)"/><path d="M10.5 19L27.5 19L29.5 21L12.5 21Z" fill="url(#sg)"/><path d="M12.5 25.5L29.5 25.5L27.5 27.5L10.5 27.5Z" fill="url(#sg)"/></svg>`,
+  ETH: `<svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="20" fill="#ecf0f1"/><path d="M20 6L12 20.5l8 4.8 8-4.8z" fill="#343434"/><path d="M20 6L12 20.5l8 4.8z" fill="#8C8C8C"/><path d="M20 27.5l-8-4.8 8 12z" fill="#3C3C3B"/><path d="M20 27.5l8-4.8-8 12z" fill="#8C8C8C"/><path d="M20 25.3l-8-4.8 8 2.8z" fill="#141414"/><path d="M20 25.3l8-4.8-8 2.8z" fill="#393939"/></svg>`,
+  MON: `<svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="20" fill="#200052"/><circle cx="20" cy="20" r="11" fill="none" stroke="#836ef9" stroke-width="2.5"/><path d="M20 11L27 16.5L27 23.5L20 29L13 23.5L13 16.5Z" fill="none" stroke="#836ef9" stroke-width="2"/><circle cx="20" cy="20" r="3" fill="#836ef9"/></svg>`,
+  SUI: `<svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="20" fill="#4da2ff"/><path d="M20 8c-2 4-6 9-6 13.5a6 6 0 0 0 12 0C26 17 22 12 20 8z" fill="#fff"/><ellipse cx="20" cy="24" rx="2.5" ry="3" fill="#4da2ff"/></svg>`,
+  POL: `<svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="20" fill="#7b3fe4"/><path d="M20 10L29 15.5V24.5L20 30L11 24.5V15.5Z" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="1.5"/><path d="M20 11.5L27.5 16V24.5L20 28.5L12.5 24.5V16Z" fill="rgba(255,255,255,0.12)"/><path d="M15 17.5L20 14.5L25 17.5V22.5L20 25.5L15 22.5Z" fill="#fff"/></svg>`,
+};
+
+const VERIFIED = `<svg class="verified" width="14" height="14" viewBox="0 0 15 15" fill="none"><circle cx="7.5" cy="7.5" r="7.5" fill="#ab9ff2"/><path d="M4.5 7.5L6.5 9.5L10.5 5.5" stroke="#000" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const L2_SVG  = `<svg width="9" height="9" viewBox="0 0 9 9" fill="none"><rect x="1" y="1" width="7" height="7" rx="1.5" stroke="#fff" stroke-width="1.5"/></svg>`;
+
+const PRICES = { BTC:64022, SOL:74, ETH:1869, MON:0.02, SUI:0.967, POL:0.09 };
+const holdings = [0,0,0,0,0,0,0];
+let cashBalance = 0;
+let tokenChanges = [0,0,0,0,0,0,0];
+let cashChange = 0;
+
+const TOKENS = [
+  { id:'BTC', name:'Bitcoin',  ticker:'BTC', dec:5 },
+  { id:'SOL', name:'Solana',   ticker:'SOL', dec:4 },
+  { id:'ETH', name:'Ethereum', ticker:'ETH', dec:4 },
+  { id:'MON', name:'Monad',    ticker:'MON', dec:2 },
+  { id:'ETH', name:'Ethereum', ticker:'ETH', dec:4, l2:true },
+  { id:'SUI', name:'Sui',      ticker:'SUI', dec:4 },
+  { id:'POL', name:'Polygon',  ticker:'POL', dec:2 },
+];
+
+function fmtUSD(n) {
+  if (n === 0) return '$0.00';
+  if (n >= 1000) return '$' + n.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+  if (n >= 1)    return '$' + n.toFixed(2);
+  return '$' + n.toFixed(4);
+}
+function setBalanceText(total) {
+  const el = document.getElementById('main-balance');
+  const str = fmtUSD(total);
+  el.textContent = str;
+  const len = str.length;
+  let size = 48;
+  if (len > 10) size = 40;
+  if (len > 13) size = 32;
+  if (len > 16) size = 26;
+  el.style.fontSize = size + 'px';
+}
+function fmtCoin(amt, dec) {
+  if (amt === 0) return '0';
+  return parseFloat(amt.toFixed(dec)).toString();
+}
+function randomChange(usd) {
+  if (usd === 0) return 0;
+  const pct  = (Math.random() * 13 + 2) / 100;
+  const sign = Math.random() < 0.5 ? 1 : -1;
+  return sign * usd * pct;
+}
+
+function fmtChange(chg) {
+  if (chg === 0) return { str: '$0.00', cls: 'muted' };
+  const abs = Math.abs(chg);
+  const str = (chg < 0 ? '-' : '+') + fmtUSD(abs);
+  const cls = chg < 0 ? 'red' : 'green';
+  return { str, cls };
+}
+
+function renderAll() {
+  const sorted = TOKENS.map((t,i) => ({ t, i, usd: holdings[i] * PRICES[t.id] }))
+    .sort((a,b) => b.usd - a.usd);
+
+  document.getElementById('token-list').innerHTML = sorted.map(({ t, i }) => {
+    const usd = holdings[i] * PRICES[t.id];
+    const sub = `${fmtCoin(holdings[i], t.dec)} ${t.ticker}`;
+    const { str: chgStr, cls: chgCls } = fmtChange(usd > 0 ? tokenChanges[i] : 0);
+    return `
+    <div class="token-row">
+      <div class="token-left">
+        <div class="token-icon-wrap">
+          ${ICONS[t.id]}
+          ${t.l2 ? `<div class="l2-badge">${L2_SVG}</div>` : ''}
+        </div>
+        <div class="token-meta">
+          <div class="token-name-row">
+            <span class="token-name">${t.name}</span>${VERIFIED}
+          </div>
+          <span class="token-sub">${sub}</span>
+        </div>
+      </div>
+      <div class="token-right">
+        <span class="token-value">${fmtUSD(usd)}</span>
+        <span class="token-change-val ${chgCls}">${chgStr}</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  updateHeader();
+}
+
+function updateHeader() {
+  const tokenTotal = TOKENS.reduce((s, t, i) => s + holdings[i] * PRICES[t.id], 0);
+  const total = tokenTotal + cashBalance;
+  setBalanceText(total);
+
+  document.getElementById('cash-display').textContent = fmtUSD(cashBalance);
+  const { str: cStr, cls: cCls } = fmtChange(cashBalance > 0 ? cashChange : 0);
+  const cashChgEl = document.getElementById('cash-change-display');
+  cashChgEl.textContent = cStr;
+  cashChgEl.className = 'cash-change ' + cCls;
+
+  const perf = document.getElementById('perf-row');
+  if (total === 0) {
+    perf.innerHTML = `<span class="perf-change" style="color:var(--muted)">$0.00</span>`;
+    return;
+  }
+
+  const totalChange = tokenChanges.reduce((s,c) => s+c, 0) + (cashBalance > 0 ? cashChange : 0);
+  const pct = (totalChange / total) * 100;
+  const { str: pStr, cls: pCls } = fmtChange(totalChange);
+  const sign = totalChange >= 0 ? '+' : '';
+  perf.innerHTML = `
+    <span class="perf-change ${pCls}">${pStr}</span>
+    <span class="perf-badge ${pCls}">${sign}${pct.toFixed(2)}%</span>`;
+}
+
+renderAll();
+
+function handleCashInput(el) {
+  cashBalance = parseFloat(el.value) || 0;
+  cashChange = randomChange(cashBalance);
+  renderAll();
+}
+
+function handleInput(el) {
+  const i = parseInt(el.dataset.index);
+  holdings[i] = parseFloat(el.value) || 0;
+  tokenChanges[i] = randomChange(holdings[i] * PRICES[TOKENS[i].id]);
+  renderAll();
+}
+
+function openModal() {
+  document.getElementById('modal-overlay').classList.add('open');
+  document.getElementById('balance-modal').classList.add('open');
+  const ci = document.getElementById('cash-input');
+  if (ci) ci.value = cashBalance > 0 ? cashBalance : '';
+
+  document.getElementById('modal-rows').innerHTML = TOKENS.map((t, i) => `
+    <div class="modal-row">
+      <div class="modal-row-left">
+        <div class="modal-ico">
+          ${ICONS[t.id]}
+          ${t.l2 ? `<div class="l2-badge">${L2_SVG}</div>` : ''}
+        </div>
+        <div class="modal-meta">
+          <span class="modal-name">${t.name}${t.l2 ? ' <span class="l2-tag">L2</span>' : ''}</span>
+          <span class="modal-price">${fmtUSD(PRICES[t.id])}</span>
+        </div>
+      </div>
+      <div class="modal-input-wrap">
+        <input class="modal-input" type="number" min="0" placeholder="0"
+          value="${holdings[i] > 0 ? holdings[i] : ''}"
+          data-index="${i}"
+          oninput="handleInput(this)"
+          onfocus="this.select()"/>
+        <span class="modal-ticker">${t.ticker}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+function closeModal() {
+  document.getElementById('balance-modal').classList.remove('open');
+  document.getElementById('modal-overlay').classList.remove('open');
+}
+
+document.getElementById('modal-overlay').addEventListener('click', closeModal);
+
+function switchTab(el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+}
+</script>
+</body>
+</html>
