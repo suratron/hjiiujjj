@@ -1,9 +1,7 @@
 const CACHE_NAME = 'phantom-cache-v1';
 const urlsToCache = [
   '/',
-  '/phantom.html',
-  '/style.css', 
-  '/script.js'
+  '/phantom.html'
 ];
 
 self.addEventListener('install', (event) => {
